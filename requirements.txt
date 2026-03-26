@@ -2,3 +2,4 @@ discord.py
 termcolor
 pystyle
 requests
+Flask
