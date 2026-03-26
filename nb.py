@@ -13,6 +13,7 @@ from discord.app_commands import CommandTree
 from pystyle import Colorate, Colors, Center
 from typing import Optional
 import requests
+import re
 
 # -------------------------
 # ASCII Title (kept for style)
