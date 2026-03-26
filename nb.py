@@ -30,12 +30,20 @@ print(Colorate.Horizontal(Colors.red_to_blue, ascii_art_title))
 
 # -------------------------
 # STARTUP INPUTS
-# -------------------------
-mode = input("Guild Mode(1) or User Mode(2): ").strip()
-bot_runner_user_id = int(input("Enter your user ID: ").strip())
-bot_token = input("Enter the bot token: ").strip()
-server_id = input("Enter the server ID (for Guild Mode) [optional]: ").strip() if mode == '1' else ""
-guild_id_for_sync = input("Enter your guild ID for command sync [optional]: ").strip() if mode == '1' else ""
+mode = os.getenv("MODE", "2")  # default to guild mode
+
+bot_runner_user_id = int(os.getenv("BOT_RUNNER_ID", "0"))
+
+bot_token = os.getenv("DISCORD_TOKEN")
+
+server_id = os.getenv("SERVER_ID", "") if mode == "1" else ""
+guild_id_for_sync = os.getenv("GUILD_ID_FOR_SYNC", "") if mode == "1" else ""
+
+if not bot_token:
+    raise ValueError("DISCORD_TOKEN is not set in environment variables")
+
+if bot_runner_user_id == 0:
+    raise ValueError("BOT_RUNNER_ID is not set correctly")
 
 # -------------------------
 # BOT SETUP
