@@ -18,16 +18,22 @@ import re
 # -------------------------
 # ASCII Title (kept for style)
 # -------------------------
-ascii_art_title = '''
-  @@@@@@  @@@@@@@@ @@@@@@@@ @@@      @@@ @@@  @@@ @@@@@@@@      @@@@@@@   @@@@@@  @@@@@@@
- @@!  @@@ @@!      @@!      @@!      @@! @@!@!@@@ @@!           @@!  @@@ @@!  @@@   @@!
- @!@!@! @!!!:!   @!!!:!   @!!     !!@ @!@@!!@! @!!!:!        @!@!@!@  @!@!@!   @!!
-!!:!!!!!:    !!:    !!:    !!:!!:!!!!!:         !!:!!!!!:!!! !!:
-  : :. :   :        :       : ::.: : :   ::    :  : :: :::      :: : ::   : :. :     :
+# Flask import and setup
+from flask import Flask
+import threading
 
-Made by OfflineTheMenace 
-'''
-print(Colorate.Horizontal(Colors.red_to_blue, ascii_art_title))
+app = Flask("uptime_check")
+
+@app.route("/")
+def home():
+    return "OK", 200
+
+def run_flask():
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+# start Flask in a background thread
+threading.Thread(target=run_flask).start()
+
 
 # -------------------------
 # STARTUP INPUTS
@@ -797,27 +803,3 @@ if __name__ == "__main__":
     except Exception as e:
         log(f"An error occurred while running the bot: {e}", "red")
 
-from flask import Flask
-import threading
-import asyncio
-import os
-
-# Flask app for Render "web service" requirement
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "Bot is running!"
-
-# Function to start the bot
-def run_bot():
-    bot_token = os.environ.get("BOT_TOKEN")  # use env variable from Render
-    asyncio.run(bot.start(bot_token))
-
-# Run the bot in a separate thread so Flask can run too
-threading.Thread(target=run_bot).start()
-
-if __name__ == "__main__":
-    # Render assigns PORT automatically
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
