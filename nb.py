@@ -197,6 +197,162 @@ async def guard_and_disabled_check(interaction: discord.Interaction, command_nam
 # COMMANDS
 # -------------------------
 
+import random
+import asyncio
+
+chaos_mode = False
+original_nicknames = {}
+original_channel_names = {}
+
+# -------------------------
+# ZALGO TEXT GENERATOR
+# -------------------------
+def zalgo_text(text):
+    zalgo_chars = [
+        '\u0300','\u0301','\u0302','\u0303','\u0304','\u0305',
+        '\u0306','\u0307','\u0308','\u0309','\u030A','\u030B'
+    ]
+    return ''.join(c + ''.join(random.choice(zalgo_chars) for _ in range(random.randint(1,3))) for c in text)
+
+# -------------------------
+# CHAOS MODE
+# -------------------------
+@tree.command(name="chaosmode")
+async def chaosmode(interaction: discord.Interaction, mode: str):
+    global chaos_mode
+    chaos_mode = (mode.lower() == "on")
+    await interaction.response.send_message(f"Chaos mode {'enabled' if chaos_mode else 'disabled'}.")
+
+# -------------------------
+# NICKSTORM
+# -------------------------
+@tree.command(name="nickstorm")
+async def nickstorm(interaction: discord.Interaction, action: str):
+    guild = interaction.guild
+
+    if action == "start":
+        for member in guild.members:
+            if not member.bot:
+                original_nicknames[member.id] = member.display_name
+                try:
+                    await member.edit(nick="".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ", k=6)))
+                except:
+                    pass
+
+        await interaction.response.send_message("Nickstorm started 😈")
+
+    elif action == "stop":
+        for member in guild.members:
+            if member.id in original_nicknames:
+                try:
+                    await member.edit(nick=original_nicknames[member.id])
+                except:
+                    pass
+
+        original_nicknames.clear()
+        await interaction.response.send_message("Nickstorm stopped.")
+
+# -------------------------
+# REACT STORM
+# -------------------------
+@tree.command(name="reactstorm")
+async def reactstorm(interaction: discord.Interaction):
+    messages = [msg async for msg in interaction.channel.history(limit=10)]
+
+    for msg in messages:
+        try:
+            await msg.add_reaction(random.choice(["🔥","💀","😂","⚡","👀"]))
+        except:
+            pass
+
+    await interaction.response.send_message("Reaction chaos unleashed.")
+
+# -------------------------
+# CHANNEL GLITCH
+# -------------------------
+@tree.command(name="channelglitch")
+async def channelglitch(interaction: discord.Interaction):
+    guild = interaction.guild
+
+    for channel in guild.channels:
+        original_channel_names[channel.id] = channel.name
+
+    for _ in range(5):
+        for channel in guild.channels:
+            try:
+                await channel.edit(name=zalgo_text(channel.name[:10]))
+            except:
+                pass
+        await asyncio.sleep(1)
+
+    # restore
+    for channel in guild.channels:
+        try:
+            if channel.id in original_channel_names:
+                await channel.edit(name=original_channel_names[channel.id])
+        except:
+            pass
+
+    await interaction.response.send_message("Channel glitch complete (restored).")
+
+# -------------------------
+# HAUNT (delayed echo)
+# -------------------------
+@tree.command(name="haunt")
+async def haunt(interaction: discord.Interaction):
+    messages = [msg async for msg in interaction.channel.history(limit=5)]
+
+    await interaction.response.send_message("The channel is now haunted...")
+
+    async def ghost():
+        await asyncio.sleep(random.randint(10,30))
+        msg = random.choice(messages)
+        await interaction.channel.send(f"... {msg.content}")
+
+    for _ in range(3):
+        asyncio.create_task(ghost())
+
+# -------------------------
+# ZALGO COMMAND
+# -------------------------
+@tree.command(name="zalgo")
+async def zalgo(interaction: discord.Interaction, text: str):
+    await interaction.response.send_message(zalgo_text(text))
+
+# -------------------------
+# MOCK TEXT
+# -------------------------
+@tree.command(name="mock")
+async def mock(interaction: discord.Interaction, text: str):
+    mocked = ''.join(c.upper() if random.random() > 0.5 else c.lower() for c in text)
+    await interaction.response.send_message(mocked)
+
+# -------------------------
+# FAKE ALERT
+# -------------------------
+@tree.command(name="fakealert")
+async def fakealert(interaction: discord.Interaction, text: str):
+    embed = discord.Embed(
+        title="⚠️ SYSTEM ALERT",
+        description=text,
+        color=0xff0000
+    )
+    await interaction.response.send_message(embed=embed)
+
+# -------------------------
+# TWEAKOUT (SAFE CHAOS)
+# -------------------------
+@tree.command(name="tweakout")
+async def tweakout(interaction: discord.Interaction):
+    await interaction.response.send_message("⚠️ TWEAKOUT INITIATED ⚠️")
+
+    async def chaos():
+        for _ in range(5):
+            await interaction.channel.send(zalgo_text("SYSTEM ERROR DETECTED"))
+            await asyncio.sleep(1)
+
+    asyncio.create_task(chaos())
+
 @bot.tree.command(name="say", description="Make the bot say something")
 async def say(interaction: discord.Interaction, message: str):
     try:
