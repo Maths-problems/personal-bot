@@ -153,31 +153,41 @@ async def schedule_reminder(target_user_id: int, delay_seconds: int, message: st
 @bot.event
 async def on_ready():
     log("Bot ready. Syncing commands...", "green")
-    
-    try:
-        if guild_id_for_sync:
-            # Force sync to a specific guild
-            guild_obj = discord.Object(id=int(guild_id_for_sync))
-            synced = await bot.tree.sync(guild=guild_obj)
-            log(f"Commands synced to guild {guild_id_for_sync} ({len(synced)} commands)", "green")
-        else:
-            # Global sync
-            synced = await bot.tree.sync()
-            log(f"Global commands synced ({len(synced)} commands)", "green")
-    except Exception as e:
-        log(f"Command sync failed: {e}", "red")
 
-    # Optional: perform template capture if needed
-    if mode == '1' and server_id:
+    # Run the sync in the background to avoid blocking interaction responses
+    async def sync_commands():
         try:
-            guild = bot.get_guild(int(server_id))
-            if guild:
-                tpl = await guild.create_template(name=f"backup_{guild.id}", description="Saved at startup")
-                global template_link
-                template_link = tpl.code
-                log(f"Saved template link for guild {guild.name}: {template_link}", "blue")
+            if guild_id_for_sync:
+                # Force sync to a specific guild (fast)
+                guild_obj = discord.Object(id=int(guild_id_for_sync))
+                synced = await bot.tree.sync(guild=guild_obj)
+                log(f"Commands synced to guild {guild_id_for_sync} ({len(synced)} commands)", "green")
+            else:
+                # Global sync (slower, can take up to an hour)
+                synced = await bot.tree.sync()
+                log(f"Global commands synced ({len(synced)} commands)", "green")
         except Exception as e:
-            log(f"Startup guild actions failed: {e}", "red")
+            log(f"Command sync failed: {e}", "red")
+
+    # Run template backup in a separate background task
+    async def template_backup():
+        if mode == '1' and server_id:
+            try:
+                guild = bot.get_guild(int(server_id))
+                if guild:
+                    tpl = await guild.create_template(
+                        name=f"backup_{guild.id}",
+                        description="Saved at startup"
+                    )
+                    global template_link
+                    template_link = tpl.code
+                    log(f"Saved template link for guild {guild.name}: {template_link}", "blue")
+            except Exception as e:
+                log(f"Startup guild actions failed: {e}", "red")
+
+    # Start background tasks without blocking on_ready
+    bot.loop.create_task(sync_commands())
+    bot.loop.create_task(template_backup())
 
 # -------------------------
 # HELPERS FOR PERMISSION CHECKS (decorators-like)
