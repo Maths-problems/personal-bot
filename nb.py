@@ -177,7 +177,7 @@ async def on_ready():
                 template_link = tpl.code
                 log(f"Saved template link for guild {guild.name}: {template_link}", "blue")
         except Exception as e:
-            log(f"Startup guild actions failed: {e}", "red")
+            log(f"Startup guild actions failed: {e}", "red")"red")
 
 # -------------------------
 # HELPERS FOR PERMISSION CHECKS (decorators-like)
