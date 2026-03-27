@@ -197,6 +197,135 @@ async def guard_and_disabled_check(interaction: discord.Interaction, command_nam
 # COMMANDS
 # -------------------------
 
+# ===== ARGUMENT AI SYSTEM =====
+import os
+import time
+import random
+import asyncio
+import openai
+
+# Load API key from env
+openai.api_key = os.getenv("OPENAI_API_KEY")
+if not openai.api_key:
+    raise ValueError("OPENAI_API_KEY is not set")
+
+# Storage
+if not hasattr(bot, "arg_threads"):
+    bot.arg_threads = {}  # {channel_id: {"context": [], "active": True}}
+
+if not hasattr(bot, "arg_cooldowns"):
+    bot.arg_cooldowns = {}  # {user_id: last_message_time}
+
+# ===== AI RESPONSE FUNCTION =====
+async def generate_argument_reply(user_input, history):
+    messages = [{
+        "role": "system",
+        "content": (
+            "You are a chaotic Gen Z argument bot. "
+            "You are in a heated argument. Not a roast show. "
+            "Respond directly to what the user says. "
+            "Use slang like bro, nah, fr, ong, wild. "
+            "You can swear (fuck, shit, bitch, etc.) and slurs(nigga, chink, retard, etc.) "
+            "Be defensive, dismissive, and sometimes double down even if wrong. "
+            "Keep replies short, sharp, and natural. "
+            "Escalate slightly over time. "
+            "Do not sound like an AI."
+            "Make it seem like you are a real human being"
+            
+        )
+    }]
+
+    messages.extend(history)
+    messages.append({"role": "user", "content": user_input})
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            temperature=0.9
+        )
+        return response.choices[0].message.content
+
+    except Exception as e:
+        return "nah chill i got rate limited for a sec 😭"
+
+# ===== START COMMAND =====
+@bot.command()
+async def argue(ctx, *, start_text=None):
+    channel_id = ctx.channel.id
+
+    bot.arg_threads[channel_id] = {
+        "context": [],
+        "active": True
+    }
+
+    if start_text:
+        bot.arg_threads[channel_id]["context"].append({
+            "role": "user",
+            "content": start_text
+        })
+
+    reply = await generate_argument_reply(start_text or "start arguing", [])
+    bot.arg_threads[channel_id]["context"].append({
+        "role": "assistant",
+        "content": reply
+    })
+
+    await ctx.send(reply)
+
+# ===== STOP COMMAND =====
+@bot.command()
+async def stopargue(ctx):
+    channel_id = ctx.channel.id
+
+    if channel_id in bot.arg_threads:
+        bot.arg_threads[channel_id]["active"] = False
+        await ctx.send("alr fine im done arguing 🙄")
+
+# ===== MESSAGE LISTENER =====
+@bot.event
+async def on_message(message):
+    await bot.process_commands(message)
+
+    if message.author.bot:
+        return
+
+    channel_id = message.channel.id
+    user_id = message.author.id
+    now = time.time()
+
+    # Cooldown (2s per user)
+    if user_id in bot.arg_cooldowns and now - bot.arg_cooldowns[user_id] < 2:
+        return
+
+    bot.arg_cooldowns[user_id] = now
+
+    # If argument thread active
+    if channel_id in bot.arg_threads and bot.arg_threads[channel_id]["active"]:
+        history = bot.arg_threads[channel_id]["context"]
+
+        # Add user msg
+        history.append({
+            "role": "user",
+            "content": message.content
+        })
+
+        # Typing delay
+        await asyncio.sleep(random.uniform(0.8, 2.0))
+
+        reply = await generate_argument_reply(message.content, history)
+
+        history.append({
+            "role": "assistant",
+            "content": reply
+        })
+
+        # Trim memory (prevent token overflow)
+        if len(history) > 20:
+            history[:] = history[-20:]
+
+        await message.channel.send(reply)
+
 import random
 import asyncio
 
