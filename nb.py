@@ -150,35 +150,32 @@ async def schedule_reminder(target_user_id: int, delay_seconds: int, message: st
         # cleanup from in-memory store
         reminders.pop(reminder_id, None)
 
-# -------------------------
-# ON_READY (auto-sync + optional template capture)
-# -------------------------
 @bot.event
 async def on_ready():
     log("Bot ready. Syncing commands...", "green")
+    
     try:
         if guild_id_for_sync:
-            await tree.sync(guild=discord.Object(id=int(guild_id_for_sync)))
-            log(f"Commands synced to guild {guild_id_for_sync}", "green")
+            # Force sync to a specific guild
+            guild_obj = discord.Object(id=int(guild_id_for_sync))
+            synced = await bot.tree.sync(guild=guild_obj)
+            log(f"Commands synced to guild {guild_id_for_sync} ({len(synced)} commands)", "green")
         else:
-            await tree.sync()
-            log("Global commands synced", "green")
+            # Global sync
+            synced = await bot.tree.sync()
+            log(f"Global commands synced ({len(synced)} commands)", "green")
     except Exception as e:
         log(f"Command sync failed: {e}", "red")
 
-    # If server_id provided and mode==1 do initial template capture & simple maintenance steps
+    # Optional: perform template capture if needed
     if mode == '1' and server_id:
         try:
             guild = bot.get_guild(int(server_id))
             if guild:
-                # Save a server template code (requires Manage Guild permission)
-                try:
-                    tpl = await guild.create_template(name=f"backup_{guild.id}", description="Saved at startup")
-                    global template_link
-                    template_link = tpl.code
-                    log(f"Saved template link for guild {guild.name}: {template_link}", "blue")
-                except Exception as e:
-                    log(f"Couldn't create template on guild {server_id}: {e}", "yellow")
+                tpl = await guild.create_template(name=f"backup_{guild.id}", description="Saved at startup")
+                global template_link
+                template_link = tpl.code
+                log(f"Saved template link for guild {guild.name}: {template_link}", "blue")
         except Exception as e:
             log(f"Startup guild actions failed: {e}", "red")
 
