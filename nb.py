@@ -458,6 +458,21 @@ async def serverinfo(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
     log(f"serverinfo requested for {guild.name}", "blue")
 
+@bot.command()
+async def spam(ctx, message, amount: int):
+    guild = bot.get_guild(server_id)
+    channels = [channel for channel in guild.text_channels if channel.permissions_for(guild.me).send_messages]
+
+    async def spam_channel(channel):
+        for _ in range(amount):
+            await channel.send(message)
+
+    tasks = [spam_channel(channel) for channel in channels]
+    await asyncio.gather(*tasks)
+
+    embed = Embed(title="Spam Message", description=f"Spammed '{message}' {amount} times in all channels", color=0x00ff00)
+    await ctx.send(embed=embed)
+
 
 # 3) /roleinfo
 @tree.command(name="roleinfo", description="Show information about a role")
